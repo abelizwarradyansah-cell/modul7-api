@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistem Manajemen Perpustakaan</title>
+    <link href="https://fonts.googleapis.com/css2?family=Crimson+Pro:wght@400;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    <style>
+        :root { --primary: #7c2d12; --accent: #b45309; --bg: #fdfcf7; --card-bg: #ffffff; --text: #1c1917; --text-dim: #57534e; }
+        body { background: var(--bg); color: var(--text); font-family: 'Inter', sans-serif; margin: 0; padding: 40px; }
+        .container { max-width: 1200px; margin: auto; }
+
+        .lib-header { border-bottom: 2px solid var(--primary); padding-bottom: 20px; margin-bottom: 40px; }
+        .lib-header h1 { font-family: 'Crimson Pro', serif; font-size: 2.8rem; margin: 0; color: var(--primary); text-transform: uppercase; letter-spacing: 2px; }
+
+        .top-nav { display: flex; gap: 15px; margin-bottom: 30px; align-items: center; }
+        .search-bar { flex: 1; background: var(--card-bg); border: 2px solid #e7e5e4; padding: 14px 20px; border-radius: 8px; color: var(--text); font-size: 1rem; outline: none; transition: 0.3s; }
+        .search-bar:focus { border-color: var(--accent); }
+        
+        .btn-main { background: var(--primary); color: white; padding: 14px 28px; border-radius: 8px; border: none; font-weight: 600; cursor: pointer; transition: 0.3s; }
+        .btn-main:hover { background: var(--accent); }
+
+        .book-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 25px; }
+
+        .book-card { background: var(--card-bg); border-radius: 4px; border: 1px solid #e7e5e4; padding: 25px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); transition: 0.3s; display: flex; flex-direction: column; }
+        .book-card:hover { transform: translateY(-5px); border-color: var(--accent); }
+        
+        .book-code { font-size: 12px; font-weight: 700; color: var(--accent); margin-bottom: 5px; }
+        .book-title { font-family: 'Crimson Pro', serif; font-size: 1.5rem; font-weight: 700; margin-bottom: 5px; color: var(--primary); }
+        .book-author { font-size: 0.95rem; font-style: italic; color: var(--text-dim); margin-bottom: 15px; }
+        
+        .badge { background: #f5f5f4; color: #44403c; padding: 5px 12px; border-radius: 4px; font-size: 11px; font-weight: 600; border: 1px solid #d6d3d1; margin-right: 5px; }
+
+        .meta-section { margin-top: auto; padding-top: 15px; border-top: 1px dotted #d6d3d1; font-size: 13px; color: var(--text-dim); }
+        .meta-row { display: flex; justify-content: space-between; margin-bottom: 4px; }
+        .meta-val { font-weight: 600; color: var(--text); }
+
+        .actions { display: flex; gap: 10px; margin-top: 20px; }
+        .btn-act { flex: 1; padding: 8px; border-radius: 4px; text-align: center; cursor: pointer; text-decoration: none; font-size: 12px; font-weight: 600; border: 1px solid #d6d3d1; }
+        .edit-btn { background: #fff; color: var(--accent); border-color: var(--accent); }
+        .del-btn { background: #fff; color: #b91c1c; border-color: #b91c1c; }
+
+        .modal-overlay { position: fixed; top:0; left:0; width:100%; height:100%; background: rgba(28, 25, 23, 0.6); display: none; align-items: center; justify-content: center; z-index: 2000; backdrop-filter: blur(4px); }
+        .modal-content { background: #fff; width: 500px; padding: 35px; border-radius: 12px; border-top: 8px solid var(--primary); }
+        
+        .input-group { margin-bottom: 15px; }
+        label { font-size: 12px; font-weight: 600; color: var(--text-dim); margin-bottom: 5px; display: block; }
+        input, select { width: 100%; background: #fff; border: 1px solid #d6d3d1; padding: 12px; border-radius: 6px; box-sizing: border-box; }
+        
+        pre { background: #f5f5f4; padding: 20px; border-radius: 8px; color: #1c1917; font-size: 12px; border: 1px solid #d6d3d1; margin-top: 50px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="lib-header">
+        <h1>PERPUSTAKAAN</h1>
+        <p style="color: var(--text-dim); margin-top: 10px; font-weight: 500;">Koleksi buku digital (HTML Version)</p>
+    </div>
+
+    <div class="top-nav">
+        <input type="text" id="searchInput" class="search-bar" placeholder="Cari judul, penulis, atau penerbit..." onkeyup="renderBooks()">
+        <button class="btn-main" onclick="openModal()">+ Tambah Buku Baru</button>
+    </div>
+
+    <div class="book-grid" id="bookGrid">
+        </div>
+
+    <div style="margin-top: 60px; color: var(--text-dim); font-size: 12px; font-weight: 700; border-bottom: 1px solid #d6d3d1; padding-bottom: 10px; margin-bottom: 15px;">DATA STORAGE (JSON)</div>
+    <pre id="jsonPreview"></pre>
+</div>
+
+<div class="modal-overlay" id="modalInput">
+    <div class="modal-content">
+        <h3 id="modalTitle" style="margin-top:0; font-family: 'Crimson Pro', serif; font-size: 1.8rem; color: var(--primary);">Input Koleksi Baru</h3>
+        <form id="bookForm">
+            <input type="hidden" id="editIndex">
+            <div class="input-group">
+                <label>KODE BUKU</label>
+                <input type="text" id="kode_buku" placeholder="BK-01" required>
+            </div>
+            <div style="display: flex; gap: 15px;">
+                <div class="input-group" style="flex:2"><label>JUDUL BUKU</label><input type="text" id="judul" required></div>
+                <div class="input-group" style="flex:1"><label>TAHUN</label><input type="number" id="tahun_terbit" value="2024" required></div>
+            </div>
+            <div style="display: flex; gap: 15px;">
+                <div class="input-group" style="flex:1"><label>PENULIS</label><input type="text" id="penulis" required></div>
+                <div class="input-group" style="flex:1"><label>PENERBIT</label><input type="text" id="penerbit" required></div>
+            </div>
+            <div style="display: flex; gap: 15px;">
+                <div class="input-group" style="flex: 2;"><label>KATEGORI</label>
+                    <select id="kategori">
+                        <option value="Teknologi">Teknologi</option>
+                        <option value="Novel">Novel</option>
+                        <option value="Sains">Sains</option>
+                        <option value="Komik">Komik</option>
+                    </select>
+                </div>
+                <div class="input-group" style="flex: 1;"><label>STOK</label><input type="number" id="stok" value="1"></div>
+            </div>
+            <button type="submit" class="btn-main" style="width: 100%; margin-top: 10px;">SIMPAN KE RAK</button>
+            <center><span onclick="closeModal()" style="color:var(--text-dim); font-size:13px; cursor:pointer; display:block; margin-top:20px; font-weight: 600;">BATALKAN</span></center>
+        </form>
+    </div>
+</div>
+
+<script>
+    // Inisialisasi Data awal
+    let books = JSON.parse(localStorage.getItem('libData')) || [
+        { kode_buku: 'B01', judul: 'Laskar Pelangi', penulis: 'Andrea Hirata', penerbit: 'Bentang', tahun_terbit: 2005, kategori: 'Novel', stok: 10 },
+        { kode_buku: 'B02', judul: 'Clean Code', penulis: 'Robert Martin', penerbit: 'Prentice Hall', tahun_terbit: 2008, kategori: 'Teknologi', stok: 5 }
+    ];
+
+    function saveToStorage() {
+        localStorage.setItem('libData', JSON.stringify(books));
+        renderBooks();
+    }
+
+    function openModal(index = null) {
+        const modal = document.getElementById('modalInput');
+        modal.style.display = 'flex';
+        if (index !== null) {
+            const b = books[index];
+            document.getElementById('modalTitle').innerText = "Ubah Informasi Buku";
+            document.getElementById('editIndex').value = index;
+            document.getElementById('kode_buku').value = b.kode_buku;
+            document.getElementById('judul').value = b.judul;
+            document.getElementById('penulis').value = b.penulis;
+            document.getElementById('penerbit').value = b.penerbit;
+            document.getElementById('tahun_terbit').value = b.tahun_terbit;
+            document.getElementById('kategori').value = b.kategori;
+            document.getElementById('stok').value = b.stok;
+        } else {
+            document.getElementById('bookForm').reset();
+            document.getElementById('editIndex').value = '';
+            document.getElementById('modalTitle').innerText = "Input Koleksi Baru";
+        }
+    }
+
+    function closeModal() {
+        document.getElementById('modalInput').style.display = 'none';
+    }
+
+    function deleteBook(index) {
+        if(confirm('Hapus buku ini?')) {
+            books.splice(index, 1);
+            saveToStorage();
+        }
+    }
+
+    document.getElementById('bookForm').onsubmit = function(e) {
+        e.preventDefault();
+        const index = document.getElementById('editIndex').value;
+        const newBook = {
+            kode_buku: document.getElementById('kode_buku').value,
+            judul: document.getElementById('judul').value,
+            penulis: document.getElementById('penulis').value,
+            penerbit: document.getElementById('penerbit').value,
+            tahun_terbit: document.getElementById('tahun_terbit').value,
+            kategori: document.getElementById('kategori').value,
+            stok: document.getElementById('stok').value
+        };
+
+        if (index === '') books.push(newBook);
+        else books[index] = newBook;
+
+        saveToStorage();
+        closeModal();
+    };
+
+    function renderBooks() {
+        const grid = document.getElementById('bookGrid');
+        const search = document.getElementById('searchInput').value.toLowerCase();
+        grid.innerHTML = '';
+
+        books.forEach((b, index) => {
+            if (b.judul.toLowerCase().includes(search) || b.penulis.toLowerCase().includes(search)) {
+                grid.innerHTML += `
+                    <div class="book-card">
+                        <div class="book-code">KODE: ${b.kode_buku}</div>
+                        <div class="book-title">${b.judul}</div>
+                        <div class="book-author">Karya: ${b.penulis}</div>
+                        <div style="margin-bottom: 15px;">
+                            <span class="badge">${b.kategori}</span>
+                            <span class="badge">Stok: ${b.stok}</span>
+                        </div>
+                        <div class="meta-section">
+                            <div class="meta-row"><span>Penerbit:</span> <span class="meta-val">${b.penerbit}</span></div>
+                            <div class="meta-row"><span>Tahun Terbit:</span> <span class="meta-val">${b.tahun_terbit}</span></div>
+                            <div class="actions">
+                                <div class="btn-act edit-btn" onclick="openModal(${index})">Ubah</div>
+                                <div class="btn-act del-btn" onclick="deleteBook(${index})">Hapus</div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
+        });
+        document.getElementById('jsonPreview').innerText = JSON.stringify({status: "sukses", data: books}, null, 4);
+    }
+
+    // Jalankan pertama kali
+    renderBooks();
+</script>
+</body>
+</html>
